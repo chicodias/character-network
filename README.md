@@ -1,16 +1,13 @@
 # Character Network
-A project on using network graph, NLP techniques (entity recognition, sentiment analysis) to analyse the relationships among characters in a novel. The project takes novel Harry Potter as an example and outputs reasonable results.
-  
-![harry potter](https://user-images.githubusercontent.com/30411828/55331547-15f2c400-54c6-11e9-9c76-2f779acc83e9.png)
-
+A project on using network graph, NLP techniques (entity recognition, sentiment analysis) to analyse the relationships among characters in a novel. The project takes novel Lord of the Rings as an example and outputs reasonable results.
 ## Why this project?
 The relationship among characters in a novel tells an important part of the story. Great novels usually have large and complex character relationship network due to the number of characters and story complexity. If there is a method to automatically **analyse complex character networks** through computer programs, which **takes in novel text** only and is able to **generate a comprehensive visualized network graph** as output, what a good news will it be for lazy readers (like myself) that like skipping parts while don't want to lose important information on the plots!
 
-With such idea in mind, this project came live! In the following parts, I will explain the techniques and implementation details of this automatic character network project, and evaluate its performance on the **Harry Potter** series.
+With such idea in mind, this project came live! In the following parts, I will explain the techniques and implementation details of this automatic character network project, and evaluate its performance on the **Lord of the Rings** series.
 
 ## Fancy Part!
 Before we go deep into the tedious implementation details, let's first have a look on the fancy part!
-![ezgif-5-e98e242d28ba](https://user-images.githubusercontent.com/30411828/55665266-d5e96380-586e-11e9-89af-c1a5da88d46f.gif)
+
 Above is the sentiment graph outputs of the novel series, each ***node*** represents a character in the novel and each ***edge*** represents the relationship between the two characters it's connected to. 
 
 In terms of node, the ***node size*** represents the importance of a character, which is measured by the number of occurrence of its name in the novel. With no surprise, Harry, Ron and Hermione take up the top 3 characters as the graph shows. 
@@ -44,11 +41,11 @@ Before we start processing and analysing the novels, we need to prepare the **no
 
 **Name Entity Recognition**
 
-With no prior knowledge into the novel, programs need to figure out the characters in the novel by name entity recognition (NER). In this project, we use the pretrained ***Spacy NER*** classifier. Because the initiation of a [`Spacy NLP`](https://spacy.io/) class takes up loads of memory, we will run the NER process **by sentence** instead of whole novel, where ***PySpark distribution*** can be embedded. For each sentence, we identify the name entities and do a series of processings. One important processing is to split the name into single words if it consists of more than one words, e.g. "Harry Potter". The point is to count the occurrence of a character more accurately, as "Harry" and "Harry Potter" refers to the same character in the novel but word "Harry" shows up more often and "Harry" will be counted where "Harry Potter" is counted. After all the single name words are created, we will filter out the names that show up in **common words**, as some common words might be counted wrongly. Then, we aggregate the names from each sentence, and do a second filter to remove names whose number of occurrence is lower than a **user-defined threshold**, to get rid of some unfrequent recognition mistakes.
+With no prior knowledge into the novel, programs need to figure out the characters in the novel by name entity recognition (NER). In this project, we use the pretrained ***Spacy NER*** classifier. Because the initiation of a [`Spacy NLP`](https://spacy.io/) class takes up loads of memory, we will run the NER process **by sentence** instead of whole novel, where ***PySpark distribution*** can be embedded. For each sentence, we identify the name entities and do a series of processings. One important processing is to split the name into single words if it consists of more than one words, e.g. "Lord of the Rings". The point is to count the occurrence of a character more accurately, as "Harry" and "Lord of the Rings" refers to the same character in the novel but word "Harry" shows up more often and "Harry" will be counted where "Lord of the Rings" is counted. After all the single name words are created, we will filter out the names that show up in **common words**, as some common words might be counted wrongly. Then, we aggregate the names from each sentence, and do a second filter to remove names whose number of occurrence is lower than a **user-defined threshold**, to get rid of some unfrequent recognition mistakes.
 
 **Character Importance**
 
-From the preliminary character name list we get from last step, we can calculate each character’s character importance, or more specifically, the occurrence frequency. This task can be done easily with the Sickit-Learn text processing function [`CountVectorizer`](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html). After that, we can select the top characters of interest based on their importances. The `top_names` function outputs the top 20 characters and their frequencies as default, but in this Harry Potter example ,we set the number to be 25 to capture a larger network.
+From the preliminary character name list we get from last step, we can calculate each character’s character importance, or more specifically, the occurrence frequency. This task can be done easily with the Sickit-Learn text processing function [`CountVectorizer`](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html). After that, we can select the top characters of interest based on their importances. The `top_names` function outputs the top 20 characters and their frequencies as default, but in this Lord of the Rings example ,we set the number to be 25 to capture a larger network.
 
 **Co-occurence Matrix**
 
@@ -92,6 +89,6 @@ a character’s name is replaced by “He” or “She” will not be captured, 
 novel is written in **first perspective**, where the protagonist’s name is mostly replaced by “I” and “me”. Besides, the whole process can be regarded as ***unsupervised learning***, which from its nature is considered not very accurate. A more rigorous project might
 consider re-training the NER and sentiment score classifier or providing more labeled data for machines to learn on character relationships.
 
-3. Though this methodology works reasonably good (from my perspective) for Harry Potter novel series, I am not sure about its performance on other novels as I haven’t had time to validate. If you like this methodology, feel free to apply it on your favorite novels and share with me the results. Of course, **stars** are even more welcomed! &nbsp; **:P**
+3. Though this methodology works reasonably good (from my perspective) for Lord of the Rings novel series, I am not sure about its performance on other novels as I haven’t had time to validate. If you like this methodology, feel free to apply it on your favorite novels and share with me the results. Of course, **stars** are even more welcomed! &nbsp; **:P**
 
 

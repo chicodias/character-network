@@ -245,7 +245,7 @@ def plot_graph(name_list, name_frequency, matrix, plt_name, mode, path=''):
 if __name__ == '__main__':
     nlp = spacy.load('en_core_web_sm')
     words = common_words('common_words.txt')
-    novel_name = 'Harry Potter'
+    novel_name = 'LoR'
     novel_folder = Path(os.getcwd()) / 'novels'
     novel = read_novel(novel_name, novel_folder)
     sentence_list = sent_tokenize(novel)
@@ -258,7 +258,7 @@ if __name__ == '__main__':
     plot_graph(name_list, name_frequency, sentiment_matrix, novel_name + ' sentiment graph', 'sentiment')
 
     # plot network graph by season
-    novel_list = [novel_name + ' ' + str(season) for season in range(1, 8)]
+    novel_list = [novel_name + ' ' + str(season) for season in range(1, 4)]
     for name in novel_list:
         novel = read_novel(name, novel_folder)
         sentence_list = sent_tokenize(novel)

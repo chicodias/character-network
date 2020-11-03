@@ -63,7 +63,7 @@ def read_novel(book_name, path):
     book_list = [i for i in book_list if i.find(book_name) >= 0]
     novel = ''
     for i in book_list:
-        with codecs.open(path + '\\' + i, 'r', encoding='utf-8', errors='ignore') as f:
+        with codecs.open(str(path) + '/' + i, 'r', encoding='utf-8', errors='ignore') as f:
             data = f.read().replace('\r', ' ').replace('\n', ' ').replace("\'", "'")
         novel += ' ' + data
 
@@ -251,13 +251,13 @@ if __name__ == '__main__':
     sc = SparkContext()  # detailed setting please refer to Spark documents
     nlp = spacy.load('en_core_web_sm')
     words = common_words('common_words.txt')
-    novel_name = 'Harry Potter'
+    novel_name = 'LoR'
     novel_folder = Path(os.getcwd()) / 'novels'
     novel = read_novel(novel_name, novel_folder)
     sentence_list = sent_tokenize(novel)
     align_rate = calculate_align_rate(sentence_list)
     preliminary_name_list = distributed_NER(sentence_list)
-    name_frequency, name_list = top_names(preliminary_name_list, novel, 25)
+    name_frecffwquency, name_list = top_names(preliminary_name_list, novel, 25)
     cooccurrence_matrix, sentiment_matrix = calculate_matrix(name_list, sentence_list, align_rate)
     # plot co-occurrence and sentiment graph for Harry Potter
     plot_graph(name_list, name_frequency, cooccurrence_matrix, novel_name + ' co-occurrence graph', 'co-occurrence')
