@@ -3,32 +3,32 @@
 
 ## Grafo de co ocorrência do primeiro volume
 
-![](LoR 1 co-occurrence graph.png)
+<img src="LoR 1 co-occurrence graph.png"/>
 
 ## Grafo de sentimento do primeiro volume
 
-![](LoR 1 sentiment graph.png) 
+<img src="LoR 1 sentiment graph.png"/>
 
 ## Grafo de co ocorrência do segundo volume
 
-![](LoR 2 co-occurrence graph.png)
+<img src="LoR 2 co-occurrence graph.png"/>
 
 ## Grafo de sentimento do segundo volume
 
-![](LoR 2 sentiment graph.png) 
+<img src="LoR 2 sentiment graph.png"/>
 
 ## Grafo de co ocorrência do terceiro volume
 
-![](LoR 3 co-occurrence graph.png)
+<img src="LoR 3 co-occurrence graph.png"/>
 
 ## Grafo de sentimento do terceiro volume
 
-![](LoR 3 sentiment graph.png) 
+<img src="LoR 1 sentiment graph.png"/>
 
 ## Grafo de co ocorrência da trama completa
 
-![](LoR co-occurrence graph.png)
+<img src="LoR co-occurrence graph.png"/>
 
 ## Grafo de sentimento da trama completa
 
-![](LoR sentiment graph.png) 
+<img src="LoR 1 sentiment graph.png"/>
