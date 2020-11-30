@@ -1,94 +1,148 @@
-# Character Network
-A project on using network graph, NLP techniques (entity recognition, sentiment analysis) to analyse the relationships among characters in a novel. The project takes novel Lord of the Rings as an example and outputs reasonable results.
-## Why this project?
-The relationship among characters in a novel tells an important part of the story. Great novels usually have large and complex character relationship network due to the number of characters and story complexity. If there is a method to automatically **analyse complex character networks** through computer programs, which **takes in novel text** only and is able to **generate a comprehensive visualized network graph** as output, what a good news will it be for lazy readers (like myself) that like skipping parts while don't want to lose important information on the plots!
+---
+output:
+  pdf_document: default
+---
+# Visualização da rede de personagens utilizando o NER
 
-With such idea in mind, this project came live! In the following parts, I will explain the techniques and implementation details of this automatic character network project, and evaluate its performance on the **Lord of the Rings** series.
+## Objetivo
 
-## Fancy Part!
-Before we go deep into the tedious implementation details, let's first have a look on the fancy part!
+Nesta atividade, nosso objetivo é utilizar os conhecimentos adquiridos ao longo da disciplina SCC0652 para **gerar um dashboard de visualização interativa** para nosso *corpus* textual utilizando o modelo de Reconhecimento de Entidade Mencionada (NER).
 
-Above is the sentiment graph outputs of the novel series, each ***node*** represents a character in the novel and each ***edge*** represents the relationship between the two characters it's connected to. 
+## Conjunto de Dados
 
-In terms of node, the ***node size*** represents the importance of a character, which is measured by the number of occurrence of its name in the novel. With no surprise, Harry, Ron and Hermione take up the top 3 characters as the graph shows. 
+Os livros foram retirados do site: https://www.kaggle.com/ashishsinhaiitr/lord-of-the-rings-text. Nosso *corpus*, ou coleção de documentos, consiste em três arquivos `.txt`, cada um contendo um volume da trilogia *The Lord of the Rings*.
 
-In terms of edge, each edge has a different ***color***, from bright (yellow) to dark (purple), which represents the ***sentiment relationship*** between two characters, or in a more human-understandable way, **hostile or friendly** relationship. The **brighter** the color of the edge, the more **friendly** the relationship is; The **darker** the color, the more **hostile** it is. Just with a general look, you can easily find out that Harry possesses most of the bright connections with other characters while Voldemort does the opposite, nearly all dark connections with others, which makes sense as they are the two opposite poles in the novel. 
+Cada um dos documentos pertencente a essa coleção terá seu conteúdo carregado na memória e, na primeira etapa deste projeto, realizamos um pré-processamento, de forma a remover pontuação, stopwords, e lematizar nosso dataset. Esse processo foi ilustrado com o auxílio de wordclouds.
 
-Besides, the graph's edges change along with the story series proceeds. This is because we split the whole novel series by episode itself to generate one set of edge parameters resepectively for each episode, so that we can see the relationship changes among characters as story proceeds. 
+![](wordcloud.png)
 
-Personally I do find this graph quite reasonable as the relationships it shows correspond with some plots that I, a person who has watched the whole series of HP movies 3 times (LOL), remembered.  You could also have a detailed check on the correctness of the [**graphs**](https://github.com/hzjken/character-network/tree/master/graphs) if you are also an enthusiastic HP fan. If not, let's carry on to the technical part so that you can apply it on your favorites! 
+As wordclouds serviram como elemento inicial de análise e deram embasamento para a segunda parte de nosso trabalho. Ao decorrer do processo, notamos que era necessário adotar outros passos em nosso pré-processamento, removendo não só as stopwords, e sim todas as palavras mais comuns da língua inglesa, contribuindo com a acurácia do nosso modelo de Entidade Mencionada.
 
-## Key Technqiues in Implementation
-**1. Name Entity Recognition**<br>
-To identify all the character names showed up in the novel, which will be used in the later processes for co-occurrence counting and sentiment score calculation.
+## O Modelo de Reconhecimento de Entidade Mencionada (NER)
 
-**2. Sentiment Analysis**<br>
-To calculate the sentiment score of a certain text context (a sentence, a fixed length of words, a paragraph etc.), which is the base of character sentiment relationship.
+![](prep.jpeg)
 
-**3. Matrix Multiplication**<br>
-To vectorise and speed up the calculation of character co-occurrence and sentiment relationship, implemented with numpy.
+Sem nenhum conhecimento prévio dos romances, o **modelo de reconhecimento de entidade mencionada** (Named-entity recognition ou NER) encontrará os personagens que fazem parte deles. Neste projeto, utilizamos o classificador pré treinado **Spacy NER**. Por conta do alto poder de processamento exigido por este módulo, processaremos as frases uma por vez, ao invés de todo o livro em uma tacada só.
 
-**4. Network Visualization**<br>
-To generate the network graph from data in co-occurrence and sentiment matrix, implemented with networkX.
+![](ner.png)
 
-**5. PySpark Distributed Computing (Optional)**<br>
-To parallelize the computation in the procedures of name entity recognition and sentiment analysis for higher speed. The repo provides the code implementation of both a normal version and Pyspark-distributed version. 
+Para cada frase, identificamos as entidades nela mencionadas e fazemos alguns processamentos. Um deles é dividir o nome em palavras únicas, se este for constituído por mais de uma palavra. Assim, "Bilbo" e "Bilbo Baggins" referirão-se a mesma entidade, de forma a contabilizar a ocorrência de um personagem na frase de forma mais apurada.
 
-## Steps
-**Data Preparation**
+![](ner2.png)
 
-Before we start processing and analysing the novels, we need to prepare the **novel** and **common words** files. The [**novel**](https://github.com/hzjken/character-network/tree/master/novels) files contain novel text of the whole story, which would be split into sentences for later computation. [**Common words**](https://github.com/hzjken/character-network/blob/master/common_words.txt) file contains the commonly used 4000+ English words, which can be downloaded easily elsewhere. The purpose of this file is to reduce the errors in the procedure of name entity recognition by removing non-name words that appear in it.
+Após todas as palavras únicas de nome terem sido criadas, filtramos os nomes que aparecem na lista de palavras comuns, pois algumas delas podem vir a ser contadas como entidades equivocadamente. E então, agregamos os nomes de cada frase, e filtramos os nomes cujo número de ocorrência seja menor que um certo limiar definido, a fim de evitar enganos de reconhecimento raros.
 
-**Name Entity Recognition**
+### Relevância dos personagens
 
-With no prior knowledge into the novel, programs need to figure out the characters in the novel by name entity recognition (NER). In this project, we use the pretrained ***Spacy NER*** classifier. Because the initiation of a [`Spacy NLP`](https://spacy.io/) class takes up loads of memory, we will run the NER process **by sentence** instead of whole novel, where ***PySpark distribution*** can be embedded. For each sentence, we identify the name entities and do a series of processings. One important processing is to split the name into single words if it consists of more than one words, e.g. "Lord of the Rings". The point is to count the occurrence of a character more accurately, as "Harry" and "Lord of the Rings" refers to the same character in the novel but word "Harry" shows up more often and "Harry" will be counted where "Lord of the Rings" is counted. After all the single name words are created, we will filter out the names that show up in **common words**, as some common words might be counted wrongly. Then, we aggregate the names from each sentence, and do a second filter to remove names whose number of occurrence is lower than a **user-defined threshold**, to get rid of some unfrequent recognition mistakes.
+A partir da lista preliminar de personagens que obtivemos, calculamos a relevância de cada personagem, ou, mais especificamente, a frequência de ocorrência de cada entidade. Fazemos isso com auxílio da função de processamento textual do Scikit-Learn `CountVectorizer`.
 
-**Character Importance**
+Dessa maneira, pudemos selecionar somente os personagens que fossem mais relevantes para nossa análise. Neste trabalho, a função `top_names` retorna os 25 nomes mais mencionados durante a trama.
 
-From the preliminary character name list we get from last step, we can calculate each character’s character importance, or more specifically, the occurrence frequency. This task can be done easily with the Sickit-Learn text processing function [`CountVectorizer`](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html). After that, we can select the top characters of interest based on their importances. The `top_names` function outputs the top 20 characters and their frequencies as default, but in this Lord of the Rings example ,we set the number to be 25 to capture a larger network.
+### Matriz de Co-ocorrência
 
-**Co-occurence Matrix**
+Neste projeto, tomamos a definição mais simples de co-ocorrência: dois personagens são **co-ocorrentes** se aparecem juntos na mesma frase. É interessante salientar que existem outras definições possíveis, baseadas em parágrafos, número de palavras ou em diversas frases.
 
-In our project, we pick the simplist definition of co-occurrence that a co-occurrence is observed if two character names show up in the same one sentence. (There might be some other definitions based on paragraphs, number of words, several sentences etc.)  To calculate
-co-occurrence, we first need a binary ***occurrence matrix***, that gives information on whether a name occurs in each sentence, again with function `CountVectorizer`. Then, the ***co-occurrence matrix*** equals the dot product of occurrence matrix and its transpose. As co-occurrence is mutually interactive, we will find that the co-occurrence matrix is repeated (symmetric) along the diagonal, so we ***triangularize*** it and set ***diagonal elements*** to be zeros as well.
+Para calcular a co-ocorrência, primeiro é necessário uma **matriz binária de co-ocorrência**, que nos dá a informação de quando um nome ocorre numa dada sentença, novamente com auxílio da função `CountVectorizer`.
 
-<p align="center"><img width="220" alt="formula1" src="https://user-images.githubusercontent.com/30411828/55671792-42dc1800-58c6-11e9-973b-d66c7a726f77.png"></p>
-<p align="center"><img width="600" alt="formula5" src="https://user-images.githubusercontent.com/30411828/55672777-783a3300-58d1-11e9-93fe-909d78ed01c2.png"></p>
+Assim, a matrix de co-ocorrência é igual ao produto cruzado entre a matriz de ocorrência e sua transposta. Como a co-ocorrência é mutualmente iterativa, temos que a matriz de co-ocorrência é *triangular simétrica*, conforme ilustrado abaixo.
 
-**Sentiment Matrix**
+$$ X_{coocor} = X_{ocor}^T \cdot X_{ocor} $$
 
-While the co-occurrence matrix above gives information on the co-occurrence or **interaction intensity**,  the ***sentiment matrix*** gives information on the **sentiment intimacy** among characters. The larger the value, the more positive relationship (friends, lovers etc.) between two characters, the lower the value (could be negative), the more negative relationship (enemies, rivals etc.) between two characters. In fact, the calculation process of sentiment matrix is similar to the above one, just that we need to introduce two more concepts.
+![](cooc.png)
 
-* **Context Sentiment Score**<br>
-Context sentiment score is the sentiment score of each sentence in the novel. In this project, we assumes that the sentiment score of a context (sentence) implies the relationship between two characters that co-occur in the context. For example, if a context has more happy words like “love”, “smile”, “good” etc., which lead to higher sentiment score, we assume that the characters involved in
-such context are highly probable to have a positive relationship and vice versa. In implementation, the sentiment score of each sentence is given by NLP library [`Afinn`](https://github.com/fnielsen/afinn) and all the scores are stored together as a **1-D array** for the convenience of ***vectorization*** later.
+## Matriz de Sentimentos
 
-* **Sentiment Alignment Rate**<br>
-Different authors and different types of novels might have different ways of narratives, which will lead to different levels of emotion description. For example, a horror novel should probably have more negative emotion descriptions than a fairy tail. The different description styles will lead to a skewness of the sentiment scores on the overall character network. In extreme cases, the relationships might be all positive or all negative. Therefore, ***sentiment alignment rate*** is introduced to align the sentiment scores and reduce skewness. It means that the sentiment score between two characters will change by one unit of sentiment alignment rate every time a co-occurrence between them is observed. The rate equals negative two times the **mean sentiment score** of non-zero-score sentences in the whole novel. The mean score gave us an intuitive sense of the sentiment skewness. The negative sign in front adjust the sentiments to an opposite direction of the skewness. Because co-occurrence does not happen in every sentence, which will reduce the adjustment effect on sentiments, we multiply the rate by 2 to offset it to some extent.
+Enquanto a matriz de co-ocorrência dá-nos informações a respeito da **intensidade de interação** entre personagens, a matriz de sentimentos dá-nos informações a respeito da **intimizade sentimental** entre dois personagens. Quanto maior o valor, mais *positiva* é uma relação entre eles (amigos, amantes, etc); quanto menor o valor (podendo ser negativo), mais *negativa* é essa relação (inimigos, rivais, etc) entre os dois.
 
-Having these two concepts, the formula for calculating the sentiment matrix could be written as below, where ***θ<sub>align</sub>*** represents the sentiment alignment rate, ***V<sub>sentiment</sub>*** represents the sentiment array, ***V<sup> i</sup><sub>sentiment</sub>*** represents the **i** th element of it,  and ***N*** represents the number of elements. Besides, triangularization and diagonal processings are still required.
+O processo de cálculo é similar ao da matriz de co-ocorrência, mas precisamos introduzir outros dois conceitos:
 
-<p align="center"><img width="400" alt="formula2" src="https://user-images.githubusercontent.com/30411828/55671901-6bb0dd00-58c7-11e9-9563-d70359835cd8.png"></p>
-<p align="center"><img width="500" alt="formula3" src="https://user-images.githubusercontent.com/30411828/55671903-6e133700-58c7-11e9-8739-3df8cab2e746.png"></p>
-<p align="center"><img width="560" alt="formula6" src="https://user-images.githubusercontent.com/30411828/55672693-6efc9680-58d0-11e9-9683-6029e7bd84e5.png"></p>
+#### Score Sentimental do Contexto
 
-## Graph Parameters and Plot
+O Score de Sentimento do Contexto (Context Sentiment Score) é o score sentimental de cada uma das frases presentes no livro.
 
-After we have the two matrices, we can now transform them into the graph parameters and then plot the fancy graph out! In this process, the matrices are first **normalized** so as to make the magnitude consistent across different novels while keeping the diversity among characters in one novel. By the way, do notice that the formulas for transforming graph parameters (in functions `matrix_to_edge_list` and `plot_graph`) have **no actual meanings**, just to make the plot look nicer and more aligned by passing proper parameters.
-![aa](https://user-images.githubusercontent.com/30411828/55665312-b141bb80-586f-11e9-9751-274f6e5359c9.png)
-## Done!
-After all the steps above, the work is done! You can now check the generated [**.png files**](https://github.com/hzjken/character-network/tree/master/graphs) in the folder to see the plots.
+Neste projeto, assumimos que o sentimento de relação entre dois personagens é dada por um contexto de co-ocorrência entre eles, sendo o score sentimental atribuído a esse contexto de acordo com a presença de palavras positivas ("love", "smile, "good", etc), neutras ou negativas.
 
-## Some More Thoughts
+Em nossa implementação, o score sentimental de cada frase é dado pela biblioteca do NLP `Afinn`, e todos os scores são armazenados juntos num array unidimensional, para conveniência da **vetorização**.
 
-1. Based on my personal test, the running of the whole process roughl takes **15 mins** to finish, which is relatively slow for one novel. That’s also the reason why I provide a simple [**Pyspark distributed version**](https://github.com/hzjken/character-network/blob/master/characterNetwork-distributed.py) to parallel and accelerate the process. But I am sure there must be faster solutions out there.
+#### Taxa de Alinhamento Sentimental
 
-2. This methodology captures some extent of information on the character relationships, but it’s not perfect. There are many parts that
-could be improved. For instance, in this example we haven’t considered the use of **personal pronoun**. Therefore, many places where
-a character’s name is replaced by “He” or “She” will not be captured, causing a loss of information. It will be even worse if a
-novel is written in **first perspective**, where the protagonist’s name is mostly replaced by “I” and “me”. Besides, the whole process can be regarded as ***unsupervised learning***, which from its nature is considered not very accurate. A more rigorous project might
-consider re-training the NER and sentiment score classifier or providing more labeled data for machines to learn on character relationships.
+Diferentes autores possuem diferentes estilos descritivos. Por exemplo, uma história de terror provavelmente tem mais descrições de emoções negativas do que um conto de fadas, o que gera distorções em nossa rede de personagens. Em casos extremos, os relacionamentos podem ser todos negativos ou positivos.
 
-3. Though this methodology works reasonably good (from my perspective) for Lord of the Rings novel series, I am not sure about its performance on other novels as I haven’t had time to validate. If you like this methodology, feel free to apply it on your favorite novels and share with me the results. Of course, **stars** are even more welcomed! &nbsp; **:P**
+A **Taxa de Alinhamento Sentimental** (Sentiment Alignment Rate) é utilizada para alinhar os scores de sentimento de forma a reduzir tais distorções. A estratégia é reajustar o score de sentimento entre dois personagens sempre que uma co-ocorrência for observada.
 
+Essa taxa é calculada a partir do score de sentimento médio de todas as sentenças do livro diferentes de zero, dando-nos um senso intuitivo da distorção do score de sentimento. O sinal negativo ajusta o vetor de sentimentos na direção oposta à da distorção. Como a co-ocorrência não ocorre em todas as frases, o que reduz o efeito do ajuste, nós multiplicamos por 2 para tentar compensar.
 
+Com esses dois conceitos em mente, o cálculo da **matriz de sentimento** pode ser escrito conforme abaixo.
+
+$\theta_{align}$ representa a taxa de alinhamento sentimental,
+$V_{sentiment}$ representa o vetor dos scores de sentimento, 
+$V^i_{sentiment}$ representa o $i$-ésimo elemento dele, e $N$ seu número de elementos. Além disso, é ainda necessário uma triangulação das matrizes.
+
+$$ \theta_{align} = -2 \times \frac{\sum V_{sentiment}^i} {N_{V_{sentiment}^i}}, V_{sentiment}^i \neq 0$$
+
+$$ X_{sentiment} =  X_{ocor}^T \cdot ( X_{ocor}^T \times V_{sentiment})^T +  X_{coocor} \times \theta_{align} $$
+
+![](sent.png)
+
+#### Grafos de Co-Ocorrência e de Sentimento
+
+Agora que temos as duas matrizes, podemos transformá-las nos parametros de um grafo e plotá-las. Para isso, primeiro **normalizamos** as matrizes para tornar a magnitude constante entre os diferentes livros, todavia mantendo a diversidade de personagens de um volume.
+
+Em nosso **grafo de sentimento** da trilogia, cada **vértice** representa um personagem do romance e cada **aresta** representa o relacionamento entre ele e algum outro personagem do conjunto. Ainda, o tamanho de cada vértice corresponde a frequência de ocorrência do respectivo personagem.
+
+Em relação a coloração dos arestas, que vai de claro (amarelo) a escuro (roxo), ela representa o **sentimento da relação** entre os dois personagens de forma mais humanamente compreensível: relação *hostil* ou *amigável*. Quanto mais *claro* um arco, mais *amigável* é aquela relação; quanto mais *escura* a cor, mais *hostil* é aquele relacionamento.
+
+![](matrixtograph.png)
+
+## Plot interativo
+
+Como o NER é feito iterativamente sem o uso de paralelização, seu tempo computacional acaba sendo muito custoso. Assim, já pré-carregamos na plataforma os dados processados por ele no arquivo `preliminary_name_list.csv`.
+
+Com as análises prontas, foi criada a parte interativa utilizando as bibliotecas `ipywidgets`, `Plotly` e `voila`. A primeira permitiu criar um menu do tipo "Dropdown" onde o usuário pode selecionar qual livro quer analizar, que podem ser separados ou conjuntos. 
+
+A próxima cria os grafos e permite que sejam interativos, exibindo informações importantes, como por exemplo, quais personagens são mais relevantes, suas interações com as demais entidades (amigável ou hostil) e a quantidade de ocorrências destas interações. 
+
+Para executar a aplicação, digite os comandos no terminal:
+```bash
+  $ pip install -r requeriments.txt
+  $ voila trabalho_viscomp_3.ipynb
+```
+Por último, o voila permite desenvolver um ambiente interativo, organizado e vizualmente agradável, proporcionando uma interação simples e completa, onde o usuário não precisa se preocupar em compreender a linguagem de programação e estruturas complexas, apenas na realização de sua análise.
+
+![](grafo-s.png)
+
+![](grafo-c.png)
+
+## Conclusão
+
+Ao longo deste trabalho, definimos nossos documentos, pré-processamos e, em seguida, procuramos adotar um paradigma visual em nosso conjunto pré-processado de dados. Ao decorrer do processo, notamos que era necessário adotar outros passos em nosso pré-processamento, removendo as palavras mais comuns da língua inglesa para contribuir com a acurácia do nosso modelo de Entidade Mencionada.
+
+Após essa etapa, tínhamos as matrizes de cada uma das análises, e decidimos representá-las como grafos não direcionados, em que cada um dos vértices era um personagem, e as arestas a respectiva análise, de co-ocorrência ou sentimento, das relações em cada um dos livros. Com auxílio do catálogo data-to-viz, decidimos adotar o modelo de representação visual de grafos em rede.
+
+Finalmente, desenvolvemos uma plataforma interativa no `voila` que, com auxílio do `Plotly`, tornou possível uma análise de redes complexas entre personagens que acontece em mais de mil páginas de romance, através de um programa que a gerou tendo como parâmetro de entrada somente os textos dos livros. Isso parecem ser boas notícias para "leitores preguiçosos", que gostam de pular partes da trama sem perder informação relevante do plot.
+
+Gostaríamos de evidenciar que poderíamos ter adotado conjuntamente outros paradigmas de representação, como por exemplo nuvens de palavras, que não foram retomados após a primeira etapa do projeto. Além disso, poderíamos adotar um Modelo de Entidade que abrangesse também apelidos dos personagens (por exemplo, grey e Gandalf, strider e Aragorn são a mesma pessoa), ou o uso de pronomes pessoais. 
+
+Também poderíamos pré-treinar o classificador de alguma maneira, para utilizá-lo especificamente para o universo da narrativa.
+
+## Referências
+
+- Character Network <https://github.com/hzjken/character-network>
+
+- Network Graphs in Python <https://plotly.com/python/network-graphs/>
+
+- Uma Introdução Sucinta à Teoria dos Grafos <https://www.ime.usp.br/~pf/teoriadosgrafos/texto/TeoriaDosGrafos.pdf>
+
+- spaCy Models <https://spacy.io/models>
+
+- Network Diagrams <https://www.data-to-viz.com/#network>
+
+- Python network visualization app using NetworkX, Plotly, Dash <https://github.com/jhwang1992/network-visualization>
+
+-  Matplotlib Colorscales in Python/v3 <https://plotly.com/python/v3/matplotlib-colorscales/>
+
+- Voilà turns Jupyter notebooks into standalone web applications. <https://github.com/voila-dashboards/voila>
+
+  
+- Tolkien, J. R. R. (1991). *The lord of the rings* 
+ 

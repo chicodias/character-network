@@ -251,8 +251,9 @@ if __name__ == '__main__':
     sentence_list = sent_tokenize(novel)
     align_rate = calculate_align_rate(sentence_list)
     preliminary_name_list = iterative_NER(sentence_list)
-    name_frequency, name_list = top_names(preliminary_name_list, novel, 25)
+    name_frequency, name_list = top_names(preliminary_name_list, novel, 50)
     cooccurrence_matrix, sentiment_matrix = calculate_matrix(name_list, sentence_list, align_rate)
+
     # plot co-occurrence and sentiment graph for Harry Potter
     plot_graph(name_list, name_frequency, cooccurrence_matrix, novel_name + ' co-occurrence graph', 'co-occurrence')
     plot_graph(name_list, name_frequency, sentiment_matrix, novel_name + ' sentiment graph', 'sentiment')
